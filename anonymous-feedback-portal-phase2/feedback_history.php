@@ -102,7 +102,6 @@ $result = $stmt->get_result();
    <form
     method="POST"
     action="delete_feedback.php"
-    onsubmit="return confirm('Are you sure you want to delete this feedback?');"
 >
     <input
         type="hidden"
