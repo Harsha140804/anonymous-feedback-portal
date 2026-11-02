@@ -36,7 +36,7 @@ Prerequisites: PHP 8.2 or later with `mysqli` and `mysqlnd`, MySQL/MariaDB and A
    export DB_NAME=anonymous_feedback
    export DB_USER=feedback_app
    export DB_PASSWORD='your-local-password'
-   php -S 127.0.0.1:8080 -t apps/secure
+   php -d expose_php=Off -S 127.0.0.1:8080 -t apps/secure apps/secure/router.php
    ```
 
 4. Visit `http://127.0.0.1:8080/register.php`. Register two test users, log in, submit feedback, and verify account separation.
@@ -79,3 +79,7 @@ The following workflows run on pushes and pull requests:
 - `PHP static security scan`: runs Semgrep with the reported ruleset and saves its complete JSON output. A completed scan does not mean zero findings.
 
 To execute integration tests locally, provision a **disposable** MySQL database, configure `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `DB_ROOT_PASSWORD` in a local test environment, run `php tests/setup_db.php` (which deletes existing test users), start PHP development servers for both app versions on ports 8090 and 8091, and run `php tests/integration.php`. Never point the setup script at a database holding real data.
+
+## Passive ZAP evidence (2 November 2026)
+
+The authenticated initial ZAP 2.17.0 baseline discovered 10 URLs and recorded 13 JSON alert entries. After security header coverage was extended to static and missing-file responses and PHP version exposure was disabled in the scan environment, a follow-up baseline recorded four informational entries and no High/Medium/Low risk entries on the explored routes. The HTML, JSON and Markdown reports are retained as GitHub Actions artifacts. The baseline is passive, not a replacement for active manual security testing. Both scan results must be interpreted within their respective runtime configurations.
