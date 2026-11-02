@@ -102,6 +102,7 @@ $result = $stmt->get_result();
 
     <?php endif; ?>
 
+    <p><a href="search_feedback.php">Search feedback</a></p>
     <p><a href="feedback.php">Back to Dashboard</a></p>
 
 </main>
@@ -112,4 +113,3 @@ $result = $stmt->get_result();
 <?php
 $stmt->close();
 ?>
-```
