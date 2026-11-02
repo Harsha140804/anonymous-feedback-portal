@@ -1,4 +1,3 @@
-```php
 <?php
 
 session_start();
@@ -57,4 +56,3 @@ $username = $_SESSION["username"];
 
 </body>
 </html>
-```
