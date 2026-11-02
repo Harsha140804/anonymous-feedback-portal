@@ -1,0 +1,15 @@
+# Development configuration and credentials
+.env
+.env.*
+!.env.example
+*.local.php
+
+# Runtime data and local output
+*.log
+*.sqlite
+coverage/
+reports/
+vendor/
+.DS_Store
+.idea/
+.vscode/

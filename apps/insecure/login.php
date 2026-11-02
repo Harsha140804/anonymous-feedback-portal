@@ -1,45 +1,43 @@
 <?php
 
+session_start();
+
 require_once 'database.php';
 
 $error = "";
-$success = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $username = trim($_POST["username"] ?? "");
     $password = $_POST["password"] ?? "";
 
     if ($username === "" || $password === "") {
-        $error = "Please enter both a username and password.";
-    } elseif (strlen($username) > 50) {
-        $error = "Username must be 50 characters or fewer.";
-    } elseif (strlen($password) < 8) {
-        $error = "Password must contain at least 8 characters.";
+        $error = "Please enter your username and password.";
     } else {
-        $passwordHash = password_hash(
-            $password,
-            PASSWORD_DEFAULT
-        );
-
         $stmt = $connection->prepare(
-            "INSERT INTO users (username, password_hash)
-             VALUES (?, ?)"
+            "SELECT id, username, password_hash, role
+             FROM users
+             WHERE username = ?"
         );
 
-        $stmt->bind_param(
-            "ss",
-            $username,
-            $passwordHash
-        );
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
 
-        if ($stmt->execute()) {
-            $success = "Registration successful! You can now log in.";
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
+
+        if ($user && password_verify($password, $user["password_hash"])) {
+
+            session_regenerate_id(true);
+
+            $_SESSION["user_id"] = $user["id"];
+            $_SESSION["username"] = $user["username"];
+            $_SESSION["role"] = $user["role"];
+
+            header("Location: feedback.php");
+            exit;
+
         } else {
-            if ($stmt->errno === 1062) {
-                $error = "That username is already taken.";
-            } else {
-                $error = "Registration failed. Please try again.";
-            }
+            $error = "Invalid username or password.";
         }
 
         $stmt->close();
@@ -53,14 +51,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Anonymous Feedback Portal</title>
+    <title>Login - Anonymous Feedback Portal</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 
 <main class="container">
 
-    <h1>Create an Account</h1>
+    <h1>Login</h1>
 
     <?php if ($error !== ""): ?>
         <p style="color: red;">
@@ -68,13 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </p>
     <?php endif; ?>
 
-    <?php if ($success !== ""): ?>
-        <p style="color: green;">
-            <?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?>
-        </p>
-    <?php endif; ?>
-
-    <form method="POST" action="register.php">
+    <form method="POST" action="login.php">
 
         <p>
             <label for="username">Username</label><br>
@@ -93,20 +85,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 type="password"
                 id="password"
                 name="password"
-                minlength="8"
                 required
             >
         </p>
 
         <button type="submit" class="button">
-            Register
+            Login
         </button>
 
     </form>
 
     <p>
-        Already registered?
-        <a href="login.php">Log in</a>
+        Don't have an account?
+        <a href="register.php">Register</a>
     </p>
 
     <p>

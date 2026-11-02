@@ -1,4 +1,3 @@
-```php
 <?php
 
 session_start();
@@ -131,4 +130,3 @@ $result = $stmt->get_result();
 <?php
 $stmt->close();
 ?>
-```
