@@ -1,13 +1,14 @@
 <?php
+declare(strict_types=1);
 
-// Prevent browsers from interpreting files as a different MIME type.
-header("X-Content-Type-Options: nosniff");
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+header('Cache-Control: no-store, max-age=0');
+header("Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'");
 
-// Prevent the application from being embedded in frames.
-header("X-Frame-Options: DENY");
-
-// Control how much referrer information is shared.
-header("Referrer-Policy: strict-origin-when-cross-origin");
-
-// Prevent sensitive pages from being cached.
-header("Cache-Control: no-store");
+// HSTS is only meaningful when the request was served over HTTPS.
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    header('Strict-Transport-Security: max-age=31536000');
+}
