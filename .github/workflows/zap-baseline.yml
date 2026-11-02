@@ -1,0 +1,98 @@
+name: OWASP ZAP authenticated passive baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, zap-baseline-evidence]
+
+permissions:
+  contents: read
+
+jobs:
+  zap_baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_password_only
+          MYSQL_DATABASE: anonymous_feedback
+          MYSQL_USER: feedback_app
+          MYSQL_PASSWORD: ci_feedback_password_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_root_password_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_NAME: anonymous_feedback
+      DB_USER: feedback_app
+      DB_PASSWORD: ci_feedback_password_only
+      DB_ROOT_PASSWORD: ci_root_password_only
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mysqli, curl
+          coverage: none
+
+      - name: Initialise disposable database
+        run: php tests/setup_db.php
+
+      - name: Start secured PHP app and create authenticated test session
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -d expose_php=Off -S 127.0.0.1:8090 -t apps/secure apps/secure/router.php > /tmp/zap-app.log 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8090/index.php > /dev/null; then break; fi
+            sleep 1
+          done
+
+          php -r '
+            mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+            $db = new mysqli(getenv("DB_HOST"), getenv("DB_USER"), getenv("DB_PASSWORD"), getenv("DB_NAME"));
+            $username = "zap_scan_user";
+            $hash = password_hash("LocalScanPassword!2026", PASSWORD_DEFAULT);
+            $s = $db->prepare("INSERT INTO users (username,password_hash,role) VALUES (?, ?, \"user\")");
+            $s->bind_param("ss", $username, $hash);
+            $s->execute();
+          '
+
+          curl --silent --show-error -c /tmp/zap-cookies.txt             'http://127.0.0.1:8090/login.php' -o /tmp/zap-login.html
+          token=$(grep -oE 'name="csrf_token" value="[a-f0-9]{64}"' /tmp/zap-login.html | head -1 | cut -d '"' -f4)
+          test -n "$token"
+
+          curl --silent --show-error -b /tmp/zap-cookies.txt -c /tmp/zap-cookies.txt             -d "csrf_token=$token&username=zap_scan_user&password=LocalScanPassword%212026"             -o /dev/null -D /tmp/zap-auth-headers.txt             'http://127.0.0.1:8090/login.php'
+          grep -q '^HTTP/.*303' /tmp/zap-auth-headers.txt
+          sid=$(awk '$6=="PHPSESSID" {print $7}' /tmp/zap-cookies.txt)
+          test -n "$sid"
+          echo "ZAP_AUTH_HEADER=Cookie" >> "$GITHUB_ENV"
+          echo "ZAP_AUTH_HEADER_VALUE=PHPSESSID=$sid" >> "$GITHUB_ENV"
+          echo "ZAP_AUTH_HEADER_SITE=http://127.0.0.1:8090" >> "$GITHUB_ENV"
+
+      - name: ZAP authenticated passive baseline scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: 'http://127.0.0.1:8090/feedback.php'
+          allow_issue_writing: false
+          fail_action: false
+          cmd_options: '-I -m 1'
+          artifact_name: 'zap-authenticated-passive-baseline'
+
+      - name: Explain coverage
+        if: always()
+        run: |
+          echo 'Passive ZAP baseline is not an active penetration test.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Authenticated coverage and scanner findings depend on the URLs discovered.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Review the archived report before claiming a vulnerability was remediated.' >> "$GITHUB_STEP_SUMMARY"

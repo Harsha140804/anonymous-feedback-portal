@@ -1,0 +1,25 @@
+name: Reproducible source snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [zap-baseline-evidence]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package repository sources and test specifications
+        run: |
+          zip -q -r source-snapshot.zip apps database docs tests .github README.md .gitignore
+          unzip -t source-snapshot.zip | tail -1
+      - name: Archive snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-snapshot
+          path: source-snapshot.zip
+          retention-days: 30
