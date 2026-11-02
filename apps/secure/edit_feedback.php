@@ -92,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // Rotate CSRF token after successful update.
             $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
 
-            header("Location: feedback_history.php");
+            header("Location: feedback_history.php", true, 303);
             exit;
         } else {
             $error = "Unable to update feedback. Please try again.";
