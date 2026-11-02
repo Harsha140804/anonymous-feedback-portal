@@ -14,10 +14,10 @@ jobs:
       - name: Validate all PHP sources
         run: |
           set -eu
-          find anonymous-feedback-portal-phase1 anonymous-feedback-portal-phase2 -type f -name '*.php' -print0 |
+          find apps/insecure apps/secure -type f -name '*.php' -print0 |
             xargs -0 -n1 php -l
       - name: Verify repository hygiene
         run: |
           test -f database/schema.sql
-          test ! -e anonymous-feedback-portal-phase2/test_db.php
-          test ! -e anonymous-feedback-portal-phase1/test_db.php
+          test ! -e apps/secure/test_db.php
+          test ! -e apps/insecure/test_db.php

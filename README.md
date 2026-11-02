@@ -8,10 +8,10 @@ A PHP/MySQL web-security coursework project with two executable versions: a deli
 
 | Path | Contents |
 | --- | --- |
-| `anonymous-feedback-portal-phase1/` | Insecure baseline, **isolated local testing only** |
-| `anonymous-feedback-portal-phase2/` | Secure reference implementation |
+| `apps/insecure/` | Insecure baseline, **isolated local testing only** |
+| `apps/secure/` | Secure reference implementation |
 | `database/schema.sql` | MySQL schema for clean setup |
-| `docs/SECURITY_TESTS.md` | Manual security and regression test matrix |
+| `tests/TEST_PLAN.md` | Manual security and regression test matrix |
 | `docs/THREAT_MODEL.md` | Assets, threats, controls and residual risks |
 | `.github/workflows/php-lint.yml` | Automated PHP syntax checks |
 
@@ -34,7 +34,7 @@ Prerequisites: PHP 8.2 or later with `mysqli` and `mysqlnd`, MySQL/MariaDB and A
    export DB_NAME=anonymous_feedback
    export DB_USER=feedback_app
    export DB_PASSWORD='your-local-password'
-   php -S 127.0.0.1:8080 -t anonymous-feedback-portal-phase2
+   php -S 127.0.0.1:8080 -t apps/secure
    ```
 
 4. Visit `http://127.0.0.1:8080/register.php`. Register two test users, log in, submit feedback, and verify account separation.
@@ -58,7 +58,7 @@ Phase 1 retains legacy local database settings and intentional vulnerabilities; 
 
 ## Evidence and tests
 
-Follow `docs/SECURITY_TESTS.md` to reproduce individual tests. For each claim, retain the input, relevant HTTP response, data state, code location, result and screenshot. ZAP and Semgrep reports should record the actual tool configuration and all findings, including false positives and residual risks. A missing alert is not proof that the whole system is secure.
+Follow `tests/TEST_PLAN.md` to reproduce individual tests. For each claim, retain the input, relevant HTTP response, data state, code location, result and screenshot. ZAP and Semgrep reports should record the actual tool configuration and all findings, including false positives and residual risks. A missing alert is not proof that the whole system is secure.
 
 The workflow validates PHP syntax only. The GitHub repository does not claim automated integration, DAST or SAST tests passed without execution.
 

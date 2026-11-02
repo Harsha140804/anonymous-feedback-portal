@@ -24,7 +24,7 @@ Record scan version, target URL, browser and policy, authenticated context, aler
 
 ## Semgrep SAST
 
-Run `semgrep scan --config auto anonymous-feedback-portal-phase2/` and save the complete output. Log every reported finding and its disposition: fixed, accepted with explanation, or false positive. Any reported totals must match the actual output and screenshots.
+Run `semgrep scan --config auto apps/secure/` and save the complete output. Log every reported finding and its disposition: fixed, accepted with explanation, or false positive. Any reported totals must match the actual output and screenshots.
 
 ## Evidence record
 
