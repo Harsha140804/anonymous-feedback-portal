@@ -11,7 +11,9 @@ A PHP/MySQL web-security coursework project with two executable versions: a deli
 | `apps/insecure/` | Insecure baseline, **isolated local testing only** |
 | `apps/secure/` | Secure reference implementation |
 | `database/schema.sql` | MySQL schema for clean setup |
-| `tests/TEST_PLAN.md` | Manual security and regression test matrix |
+| `tests/TEST_PLAN.md` | Manual testing and evidence procedures |
+| `tests/integration.php` | Executable HTTP and database security regression tests |
+| `tests/setup_db.php` | Initialises disposable CI database from the schema |
 | `docs/THREAT_MODEL.md` | Assets, threats, controls and residual risks |
 | `.github/workflows/php-lint.yml` | Automated PHP syntax checks |
 
@@ -40,7 +42,7 @@ Prerequisites: PHP 8.2 or later with `mysqli` and `mysqlnd`, MySQL/MariaDB and A
 4. Visit `http://127.0.0.1:8080/register.php`. Register two test users, log in, submit feedback, and verify account separation.
 5. Admin access is assigned separately by a database administrator: `UPDATE users SET role='admin' WHERE username='your-test-admin';`. Do not build a self-service admin role selection into registration.
 
-Phase 1 retains legacy local database settings and intentional vulnerabilities; run it only with disposable local data in an isolated environment. Do not put Phase 1 on the public internet.
+Phase 1 uses the same environment-based database configuration and retains deliberate vulnerabilities. Run it only with disposable local data in an isolated environment; **never expose it to the public internet**.
 
 ## Security comparison
 
@@ -60,8 +62,20 @@ Phase 1 retains legacy local database settings and intentional vulnerabilities; 
 
 Follow `tests/TEST_PLAN.md` to reproduce individual tests. For each claim, retain the input, relevant HTTP response, data state, code location, result and screenshot. ZAP and Semgrep reports should record the actual tool configuration and all findings, including false positives and residual risks. A missing alert is not proof that the whole system is secure.
 
-The workflow validates PHP syntax only. The GitHub repository does not claim automated integration, DAST or SAST tests passed without execution.
+GitHub Actions performs PHP syntax checks, live PHP/MySQL security regression tests and an independent Semgrep scan scoped to `apps/secure/`. The integration suite exercises two accounts, an administrator, CRUD, session security, CSRF, stored XSS, cross-user access restrictions and search SQL injection. It also checks that the intentionally vulnerable baseline remains demonstrable. Semgrep JSON output is preserved as a workflow artifact for review.
+
+The automated suite is **not** a substitute for an authenticated OWASP ZAP assessment, manual browser testing or a full source-code review. Individual scanner findings must be investigated, not silently discarded.
 
 ## Limitations
 
 This is an educational comparison, not a production-ready service. A fresh browser session can bypass session-local login throttling; production deployment would require centralized throttling, monitoring, HTTPS, backups and independent review. Secure cookies and HSTS are enabled for directly detected HTTPS; reverse proxies need explicit trusted-HTTPS configuration.
+
+## Continuous integration
+
+The following workflows run on pushes and pull requests:
+
+- `PHP syntax checks`: parses both application versions and checks repository hygiene.
+- `PHP and MySQL security regression`: starts disposable MySQL 8 and two loopback PHP servers, then executes `tests/integration.php` using disposable users.
+- `PHP static security scan`: runs Semgrep with the reported ruleset and saves its complete JSON output. A completed scan does not mean zero findings.
+
+To execute integration tests locally, provision a **disposable** MySQL database, configure `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `DB_ROOT_PASSWORD` in a local test environment, run `php tests/setup_db.php` (which deletes existing test users), start PHP development servers for both app versions on ports 8090 and 8091, and run `php tests/integration.php`. Never point the setup script at a database holding real data.
