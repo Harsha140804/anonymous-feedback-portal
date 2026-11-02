@@ -42,7 +42,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           extensions: mysqli, curl
           coverage: none
 
@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          php -S 127.0.0.1:8090 -t apps/secure > /tmp/zap-app.log 2>&1 &
+          php -d expose_php=Off -S 127.0.0.1:8090 -t apps/secure apps/secure/router.php > /tmp/zap-app.log 2>&1 &
           for attempt in $(seq 1 20); do
             if curl -fsS http://127.0.0.1:8090/index.php > /dev/null; then break; fi
             sleep 1
