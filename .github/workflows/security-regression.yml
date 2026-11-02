@@ -1,0 +1,86 @@
+name: PHP and MySQL security regression
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_password_only
+          MYSQL_DATABASE: anonymous_feedback
+          MYSQL_USER: feedback_app
+          MYSQL_PASSWORD: ci_feedback_password_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_root_password_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_NAME: anonymous_feedback
+      DB_USER: feedback_app
+      DB_PASSWORD: ci_feedback_password_only
+      DB_ROOT_PASSWORD: ci_root_password_only
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, curl, mbstring
+          coverage: none
+
+      - name: Validate PHP syntax
+        run: |
+          set -euo pipefail
+          find apps tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Initialise disposable MySQL database
+        run: php tests/setup_db.php
+
+      - name: Run live HTTP and database security checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -S 127.0.0.1:8090 -t apps/secure > /tmp/secure-app.log 2>&1 &
+          SECURE_PID=$!
+          php -S 127.0.0.1:8091 -t apps/insecure > /tmp/insecure-app.log 2>&1 &
+          INSECURE_PID=$!
+
+          cleanup() {
+            local exit_code=$?
+            if [ "$exit_code" -ne 0 ]; then
+              echo "Secure PHP server log:"
+              tail -n 100 /tmp/secure-app.log || true
+              echo "Insecure PHP server log:"
+              tail -n 100 /tmp/insecure-app.log || true
+            fi
+            kill "$SECURE_PID" "$INSECURE_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8090/index.php > /dev/null \
+              && curl -fsS http://127.0.0.1:8091/index.php > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          php tests/integration.php
