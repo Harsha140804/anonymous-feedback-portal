@@ -20,12 +20,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install Semgrep
-        run: python -m pip install semgrep
+        run: python -m pip install semgrep==1.183.0
+          semgrep --version
 
       - name: Scan the secure application only
         run: |
           mkdir -p scan-results
-          semgrep scan --config auto --metrics off \
+          semgrep scan --config p/php --metrics off \
             --json --output scan-results/semgrep-secure.json apps/secure
 
       - name: Summarise static findings
